@@ -1,0 +1,17 @@
+1、执行 php artisan make:entity 名称
+   生成 Repository 模式框架
+
+2、修改对应控制器继承的Controller的命名空间
+
+3、修改 Repository中的接口 继承的接口（增加一个RepositoryCriteriaInterface）
+
+4、动态修改分页返回数量，新建一个BaseRepositoryEloquent类继承BaseRepository类，并重写paginate方法
+   要动态改变分页返回数量，在请求中传入page_size字段即可（这一步是公共的，做一次就行）
+
+5、修改Repository实体类，让其不继承BaseRepository类，而是继承BaseRepositoryEloquent类
+
+6、修改数据库迁移文件，并迁移数据库
+
+7、设计数据库模型（设置模型属性，定义关联关系）
+
+8、有需要可以定义模型事件,在Providers->APPServiceProvider.php中的boot方法中定义模型事件。
