@@ -25,5 +25,8 @@ Route::group(['namespace' => 'Api'],function (){
     Route::post('get_evaluate','CourseEvaluateController@getEvaluate');//查询课程评价
     Route::post('get_teacher_list','CourseTeacherController@getTeacher');//查询课程老师列表
     Route::post('get_teacher_details','CourseTeacherController@getTeacherDetails');//查询课程老师详情
+
+    Route::get('get_article_class','ArticleController@getArticleClass');//获取文章分类
+    Route::post('get_article_list','ArticleController@getArticleList');//获取文章列表
 });
 
