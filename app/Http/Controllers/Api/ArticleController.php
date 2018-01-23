@@ -27,9 +27,9 @@ class ArticleController extends Controller
         }
 
         return response()->json([
-            'result' => 'ok',
+            'result' => 'error',
             'code' => Code::$NoData,
-            'msg'=> '没有文章分类',
+            'msg'=> '没有文章分类数据',
         ]);
 
     }
