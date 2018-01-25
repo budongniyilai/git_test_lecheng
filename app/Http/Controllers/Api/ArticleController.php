@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Code;
 use App\Models\Article;
 use App\Models\ArticleClass;
+use App\Models\EiPlatform;
+use App\Models\User;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
@@ -37,20 +39,12 @@ class ArticleController extends Controller
     //获取文章列表
     public function getArticleList(Request $request)
     {
-        /**
-         * 参数：文章筛选条件
-         * 文章分类
-         * 该分类上次获取到的最新文章的id，没有就传null
-         */
-
         $msg = [
             'article_class_id.required' => '你没有提供文章分类id',
-            'max_article_id.required' => '你没有提供该文章分类下的最后浏览文章id',
         ];
 
         $validator = Validator::make(Input::all(),[
             'article_class_id' => 'required',
-            'max_article_id' => 'required',
         ],$msg);
 
         if($validator->fails()){
@@ -62,11 +56,43 @@ class ArticleController extends Controller
         }
 
         $article_class_id = $request->article_class_id;
-        $max_article_id = $request->max_article_id;
 
-        $article_list = Article::where('class_id',$article_class_id)
-                               ->where('id','>',$max_article_id)
-                               ->orderBy('id', 'asc')->limit(5)->get();
+        $article_list = Article::select('id','title','img_url','time','read_num',
+                               'comment_num','content','like_num','author_type','author_id')
+                               ->where('class_id',$article_class_id)   //分类筛选条件
+                               ->where('status',2)   //文章状态需为可读
+                              //文章排序，暂时按照最新文章来排序，后面写一个综合热度排序
+                               ->orderBy('id', 'desc')   //文章倒序排列，最新的在前
+                               ->paginate(5);  //文章分页，每页返回5条数据
+
+        foreach ($article_list as $key => $value){
+            //查询作者名称
+            if ($value->author_type =='机构'){
+                $author_name = EiPlatform::select('ei_name')
+                          ->where('id',$value->author_id)->first();
+                if ($author_name){
+                    $value->author_name = $author_name->ei_name;
+                }else{
+                    $value->author_name = null;
+                }
+            }
+            if ($value->author_type =='个人'){
+                $author_name = User::select('nickname')
+                                     ->where('id',$value->author_id)->first();
+                if ($author_name){
+                    $value->author_name = $author_name->nickname;
+                }else{
+                    $value->author_name = null;
+                }
+            }
+
+//            //去除html中的\r\n
+//            $value->content = str_replace("\r\n","",$value->content);
+//            //把html字符串中的\"转换成"
+//            $value->content = str_replace("","",$value->content);
+
+        }
+
 
         return response()->json([
             'result' => 'ok',
