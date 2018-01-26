@@ -28,5 +28,6 @@ Route::group(['namespace' => 'Api'],function (){
 
     Route::get('get_article_class','ArticleController@getArticleClass');//获取文章分类
     Route::post('get_article_list','ArticleController@getArticleList'); //获取文章列表
+    Route::post('get_article','ArticleController@getArticle');      //获取文章详细信息
 });
 
