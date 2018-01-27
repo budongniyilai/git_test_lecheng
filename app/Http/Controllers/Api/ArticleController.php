@@ -195,4 +195,160 @@ class ArticleController extends Controller
         ]);
     }
 
+    //添加/取消 文章点赞
+    public function addArticleLike(Request $request)
+    {
+        $msg = [
+            'article_id.required' => '你没有提供文章ID',
+            'type.required' => '你没有提供操作指令'
+        ];
+
+        $validator = Validator::make(Input::all(),[
+            'article_id' => 'required',
+            'type' => 'required',
+        ],$msg);
+
+        if($validator->fails()){
+            return response()->json([
+                'result' => 'error',
+                'code' => Code::$ParameterErr,
+                'msg'=>$validator->errors()
+            ]);
+        }
+
+        $article_id = $request->article_id;
+        $type = $request->type;
+        $user_id =$request->user()->id;
+
+        //点赞判断
+        $result = ArticleLike::where('user_id',$user_id)->where('article_id',$article_id)->first();
+
+        $article = Article::where('id',$article_id)->first();
+        $like_num = $article->like_num;
+
+        if($result){   //存在点赞记录
+            if ($type == 1){
+                return response()->json([
+                    'result' => 'error',
+                    'code' => Code::$ExistData,
+                    'msg'=>'你已经点过赞了'
+                ]);
+            }
+            if ($type == -1){
+                //删除点赞记录
+                $result1 = ArticleLike::where('user_id',$user_id)->where('article_id',$article_id)->delete();
+                //点赞总数减一
+                if ($like_num>0){
+                    $result2 = Article::where('id',$article_id)->update(
+                        [
+                            'like_num'=>$like_num-1
+                        ]
+                    );
+                }
+                return response()->json([
+                    'result' => 'ok',
+                    'code' => Code::$OK,
+                    'msg'=>'取消点赞成功'
+                ]);
+            }
+        }else{  //点赞记录不存在
+            if($type == -1){
+                return response()->json([
+                    'result' => 'error',
+                    'code' => Code::$NoData,
+                    'msg'=>'你未点赞，无法取消点赞'
+                ]);
+            }
+            if ($type == 1){
+                $add = [
+                    'user_id' => $user_id,
+                    'article_id' => $article_id
+                ];
+                $result3 = ArticleLike::Insert($add);  //写入点赞记录
+                $result4 = Article::where('id',$article_id)->update(
+                    [
+                        'like_num'=>$like_num+1
+                    ]
+                );
+
+                return response()->json([
+                    'result' => 'ok',
+                    'code' => Code::$OK,
+                    'msg'=>'点赞成功！'
+                ]);
+            }
+        }
+    }
+
+    //添加/取消 文章收藏
+    public function addArticleCollection(Request $request)
+    {
+        $msg = [
+            'article_id.required' => '你没有提供文章ID',
+            'type.required' => '你没有提供操作指令'
+        ];
+
+        $validator = Validator::make(Input::all(),[
+            'article_id' => 'required',
+            'type' => 'required',
+        ],$msg);
+
+        if($validator->fails()){
+            return response()->json([
+                'result' => 'error',
+                'code' => Code::$ParameterErr,
+                'msg'=>$validator->errors()
+            ]);
+        }
+
+        $article_id = $request->article_id;
+        $type = $request->type;
+        $user_id =$request->user()->id;
+
+        //收藏判断
+        $result = ArticleCollection::where('article_id',$article_id)
+            ->where('user_id',$user_id)->first();
+
+        if($result){   //存在收藏数据
+            if ($type == 1){
+                return response()->json([
+                    'result' => 'error',
+                    'code' => Code::$ExistData,
+                    'msg'=>'你已经收藏过该文章'
+                ]);
+            }
+            if ($type == -1){
+                //删除收藏记录
+                $result1 = ArticleCollection::where('article_id',$article_id)->where('user_id',$user_id)->delete();
+
+                return response()->json([
+                    'result' => 'ok',
+                    'code' => Code::$OK,
+                    'msg'=>'取消收藏成功'
+                ]);
+            }
+        }else{  //点赞记录不存在
+            if($type == -1){
+                return response()->json([
+                    'result' => 'error',
+                    'code' => Code::$NoData,
+                    'msg'=>'你还未收藏，无法取消'
+                ]);
+            }
+            if ($type == 1){
+                $add = [
+                    'user_id' => $user_id,
+                    'article_id' => $article_id,
+                    'time' => time()
+                ];
+                $result3 = ArticleCollection::Insert($add);  //写入收藏
+
+                return response()->json([
+                    'result' => 'ok',
+                    'code' => Code::$OK,
+                    'msg'=>'收藏成功！'
+                ]);
+            }
+        }
+    }
 }

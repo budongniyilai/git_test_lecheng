@@ -5,8 +5,11 @@ use Illuminate\Http\Request;
 //需要用户鉴权的路由
 Route::group(['middleware'=>'auth:api','namespace' => 'Api'],function (){
     Route::get('/user',function(Request $request){return $request->user();});//获取用户信息
-    Route::post('/add_evaluate','CourseEvaluateController@addEvaluate');//添加课程评价
-    Route::post('/add_course_like','CourseController@addCourseLike');//添加课程点赞
+    Route::post('/add_evaluate','CourseEvaluateController@addEvaluate'); //添加课程评价
+    Route::post('/add_course_like','CourseController@addCourseLike');    //添加/取消  课程点赞
+
+    Route::post('/add_article_like','ArticleController@addArticleLike'); //添加/取消  文章点赞
+    Route::post('/add_article_collection','ArticleController@addArticleCollection');  //添加/取消  文章收藏
 });
 
 //不需要用户鉴权的路由
