@@ -10,6 +10,7 @@ use App\Models\ArticleComment;
 use App\Models\ArticleCommentLike;
 use App\Models\ArticleLike;
 use App\Models\EiPlatform;
+use App\Models\FollowAuthor;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -350,5 +351,219 @@ class ArticleController extends Controller
                 ]);
             }
         }
+    }
+
+    //关注作者
+    public function followAuthor(Request $request)
+    {
+        $msg = [
+            'author_type.required' => '你没有提供作者类型',
+            'author_id.required' => '你没有提供作者id',
+            'type.required' => '你没有提供操作类型'
+        ];
+
+        $validator = Validator::make(Input::all(),[
+            'author_type' => 'required',
+            'author_id' => 'required',
+            'type' => 'required',
+        ],$msg);
+
+        if($validator->fails()){
+            return response()->json([
+                'result' => 'error',
+                'code' => Code::$ParameterErr,
+                'msg'=>$validator->errors()
+            ]);
+        }
+
+        $author_type = $request->author_type;
+        $author_id = $request->author_id;
+        $type = $request->type;
+        $user_id = $request->user()->id;
+
+        //查询是否关注了作者
+        $result = FollowAuthor::where('author_type',$author_type)->where('author_id',$author_id)->where('user_id',$user_id)->first();
+
+        if($result){   //存在关注数据
+            if ($type == 1){
+                return response()->json([
+                    'result' => 'error',
+                    'code' => Code::$ExistData,
+                    'msg'=>'你已经关注过该作者'
+                ]);
+            }
+            if ($type == -1){
+                //删除关注记录
+                $result1 = FollowAuthor::where('author_type',$author_type)->where('author_id',$author_id)->where('user_id',$user_id)->delete();
+
+                return response()->json([
+                    'result' => 'ok',
+                    'code' => Code::$OK,
+                    'msg'=>'取消关注成功'
+                ]);
+            }
+        }else{  //关注记录不存在
+            if($type == -1){
+                return response()->json([
+                    'result' => 'error',
+                    'code' => Code::$NoData,
+                    'msg'=>'你还未关注该作者，无法取消'
+                ]);
+            }
+            if ($type == 1){
+                $add = [
+                    'user_id' => $user_id,
+                    'author_type' => $author_type,
+                    'author_id' => $author_id,
+                    'time' => time()
+                ];
+                $result3 = FollowAuthor::Insert($add);  //写入关注
+
+                return response()->json([
+                    'result' => 'ok',
+                    'code' => Code::$OK,
+                    'msg'=>'关注成功！'
+                ]);
+            }
+        }
+
+    }
+
+    //搜索文章
+    public function searchArticle(Request $request)
+    {
+        $msg = [
+            'search.required' => '你没有提供搜索关键词',
+        ];
+
+        $validator = Validator::make(Input::all(), [
+            'search' => 'required',
+        ], $msg);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'result' => 'error',
+                'code' => Code::$ParameterErr,
+                'msg' => $validator->errors()
+            ]);
+        }
+
+        $search = '%' . $request->search . '%';//这里的搜索还应该加上分词拆分
+        $article = Article::select('id','title','img_url','time','read_num','comment_num',
+                                   'like_num','author_type','author_id')
+                          ->where('title','like',$search)->where('status',2)->get();
+
+        if (count($article)==0){
+            return response()->json([
+                'result' => 'error',
+                'code' => Code::$NoData,
+                'msg' => '没有搜索结果，请更换关键词'
+            ]);
+        }
+
+        foreach ($article as $key=>$value){
+            //查询作者名称
+            if ($value->author_type =='机构'){
+                $author_name = EiPlatform::select('ei_name')
+                    ->where('id',$value->author_id)->first();
+                if ($author_name){
+                    $value->author_name = $author_name->ei_name;
+                }else{
+                    $value->author_name = null;
+                }
+            }
+            if ($value->author_type =='个人'){
+                $author_name = User::select('nickname')
+                    ->where('id',$value->author_id)->first();
+                if ($author_name){
+                    $value->author_name = $author_name->nickname;
+                }else{
+                    $value->author_name = null;
+                }
+            }
+        }
+
+        return response()->json([
+            'result' => 'ok',
+            'code' => Code::$OK,
+            'msg' => '成功',
+            'data' => $article
+        ]);
+    }
+    
+    //查看作者主页及他的全部文章
+    public function getAuthorAllArticle(Request $request)
+    {
+        $msg = [
+            'author_type.required' => '你没有提供作者类型',
+            'author_id.required' => '你没有提供作者id',
+            'user_id.required' => '你没有用户id',
+        ];
+
+        $validator = Validator::make(Input::all(), [
+            'author_type' => 'required',
+            'author_id' => 'required',
+            'user_id' => 'required'
+        ], $msg);
+
+        $author_type = $request->author_type;
+        $author_id = $request->author_id;
+        $user_id = $request->id;
+
+        $data = [];
+
+        if ($validator->fails()) {
+            return response()->json([
+                'result' => 'error',
+                'code' => Code::$ParameterErr,
+                'msg' => $validator->errors()
+            ]);
+        }
+        //查询作者的头像、名称
+        if ($author_type =='机构'){
+            $author = EiPlatform::select('ei_logo','ei_name')
+                ->where('id',$author_id)->first();
+            if ($author){
+                $data['author_name'] = $author->ei_name;
+                $data['author_head'] = $author->ei_logo;
+            }else{
+                $data['author_name'] = null;
+                $data['author_head'] = null;
+            }
+        }
+        if ($author_type =='个人'){
+            $author = User::select('nickname','head')
+                ->where('id',$author_id)->first();
+            if ($author){
+                $data['author_name'] = $author->nickname;
+                $data['author_head'] = $author->head;
+            }else{
+                $data['author_name'] = null;
+                $data['author_head'] = null;
+            }
+        }
+        //查询是否关注了该作者
+        $follow = FollowAuthor::where('user_id',$user_id)->where('author_type',$author_type)->where('author_id',$author_id)->first();
+        if ($follow){
+            $data['follow'] = true;
+        }else{
+            $data['follow'] = false;
+        }
+        //查询作者的粉丝数
+        $follow_num = FollowAuthor::where('author_type',$author_type)->where('author_id',$author_id)->count();
+        $data['follow_num'] = $follow_num;
+
+        //查询作者所有文章
+        $articles = Article::select('id','title','img_url','time','read_num','comment_num',
+                                    'like_num','author_type','author_id')
+                           ->where('author_type',$author_type)->where('author_id',$author_id)->where('status',2)->get();
+        $data['articles'] = $articles;
+
+        return response()->json([
+            'result' => 'ok',
+            'code' => Code::$OK,
+            'msg' => '成功',
+            'data' => $data
+        ]);
     }
 }

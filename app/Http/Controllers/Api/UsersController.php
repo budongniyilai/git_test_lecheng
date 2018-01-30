@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Code;
 use Illuminate\Http\Request;
 
 use App\Http\Requests;
@@ -196,5 +197,25 @@ class UsersController extends Controller
         }
 
         return redirect()->back()->with('message', 'User deleted.');
+    }
+
+    //获取个人信息
+    public function getUser(Request $request)
+    {
+        $user = $request->user();
+        if ($user){
+            return response()->json([
+                'result' => 'ok',
+                'code' => Code::$OK,
+                'msg' => '成功',
+                'data' => $user
+            ]);
+        }else{
+            return response()->json([
+                'result' => 'error',
+                'code' => Code::$SystemErr,
+                'msg' => '获取用户信息失败',
+            ]);
+        }
     }
 }
