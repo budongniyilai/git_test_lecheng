@@ -4,7 +4,6 @@ use Illuminate\Http\Request;
 
 //需要用户鉴权的路由
 Route::group(['middleware'=>'auth:api','namespace' => 'Api'],function (){
-    Route::get('/get_user','UsersController@getUser');//获取用户信息
     Route::post('/add_evaluate','CourseEvaluateController@addEvaluate'); //添加课程评价
     Route::post('/add_course_like','CourseController@addCourseLike');    //添加/取消  课程点赞
 
@@ -14,6 +13,8 @@ Route::group(['middleware'=>'auth:api','namespace' => 'Api'],function (){
     Route::post('/add_article_comment_like','ArticleCommentController@addCommentLike');     //添加/取消  文章评价点赞
     Route::post('/follow_author','ArticleController@followAuthor');  //关注/取消关注  作者
 
+    Route::get('/get_user','UsersController@getUser');//获取用户信息
+    Route::post('/modify_user_info','UserInfoController@modifyUserInfo');   //修改用户信息
 });
 
 //不需要用户鉴权的路由
