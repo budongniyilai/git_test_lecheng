@@ -15,6 +15,7 @@ Route::group(['middleware'=>'auth:api','namespace' => 'Api'],function (){
 
     Route::get('/get_user','UsersController@getUser');//获取用户信息
     Route::post('/modify_user_info','UserInfoController@modifyUserInfo');   //修改用户信息
+
 });
 
 //不需要用户鉴权的路由
@@ -39,5 +40,7 @@ Route::group(['namespace' => 'Api'],function (){
     Route::post('get_article','ArticleController@getArticle');      //获取文章详细信息
     Route::post('search_article','ArticleController@searchArticle');      //搜索文章
     Route::post('get_author_all_article','ArticleController@getAuthorAllArticle');  //获取作者主页及所有文章列表
+
+    Route::post('/upload','UserInfoController@upload');
 });
 
