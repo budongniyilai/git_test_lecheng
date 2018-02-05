@@ -41,6 +41,6 @@ Route::group(['namespace' => 'Api'],function (){
     Route::post('search_article','ArticleController@searchArticle');      //搜索文章
     Route::post('get_author_all_article','ArticleController@getAuthorAllArticle');  //获取作者主页及所有文章列表
 
-    Route::post('/upload','UserInfoController@upload');
+//    Route::post('/upload','UserInfoController@upload');//上传图片测试
 });
 

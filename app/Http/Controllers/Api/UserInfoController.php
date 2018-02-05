@@ -15,6 +15,7 @@ class UserInfoController extends Controller
     //图片上传测试
     public function upload(Request $request)
     {
+        //图片检测
         if(!$request->hasFile('value')){
             return response()->json([
                 'result' => 'error',
@@ -23,11 +24,33 @@ class UserInfoController extends Controller
             ]);
         }
 
-        $move = Qiniu::moveFile(file('value'));//移动
-        return $move;
+        //图片移动
+        $qiniu = new Qiniu();
+        $move = $qiniu->moveFile($request->file('value'));//移动文件到服务器
+        if(array_key_exists('error',$move)){  //移动文件出错
+            return response()->json([
+                'result' => 'error',
+                'code' => Code::$SystemErr,
+                'msg'=>$move['error']
+            ]);
+        }
 
-
-        //unlink(app_path().'/uploads/'.$new_file_name.'.'.$extension);//删除文件
+        list($ret, $err) = $qiniu->uploadManager($move['fileName'],$move['filePath']);  //图片上传七牛云
+        unlink($move['filePath']);  //删除上传到服务器上的图片
+        if ($err!=null) {
+            return response()->json([
+                'result' => 'error',
+                'code' => Code::$SystemErr,
+                'msg'=>'图片上传失败'
+            ]);
+        }
+        $head_pic = env('QINIU_DOMAIN_NAME','').$ret['key'];//上传到七牛云的文件地址
+        return response()->json([
+            'result' => 'ok',
+            'code' => Code::$OK,
+            'msg'=>'图片上传成功',
+            'data' => $head_pic
+        ]);
     }
 
     //修改个人信息
@@ -130,15 +153,55 @@ class UserInfoController extends Controller
             ]);
 
         }elseif ($key == 'head'){   //修改头像
+            //图片检测
             if(!$request->hasFile('value')){
                 return response()->json([
                     'result' => 'error',
                     'code' => Code::$ParameterErr,
-                    'msg'=> '请提供头像文件',
+                    'msg'=> [
+                        'value'=>'请上传正确的图片文件'
+                    ]
                 ]);
             }
 
-//            return 123;
+            //图片移动
+            $qiniu = new Qiniu();
+            $move = $qiniu->moveFile($request->file('value'));//移动文件到服务器
+            if(array_key_exists('error',$move)){  //移动文件出错
+                return response()->json([
+                    'result' => 'error',
+                    'code' => Code::$SystemErr,
+                    'msg'=>'系统错误，请稍后重试！'
+                ]);
+            }
+
+            list($ret, $err) = $qiniu->uploadManager($move['fileName'],$move['filePath']);  //图片上传七牛云
+            unlink($move['filePath']);  //删除上传到服务器上的图片
+            if ($err!=null) {
+                return response()->json([
+                    'result' => 'error',
+                    'code' => Code::$SystemErr,
+                    'msg'=>'系统错误，请稍后重试！'
+                ]);
+            }
+            $head_pic = env('QINIU_DOMAIN_NAME','').$ret['key'];//上传到七牛云的文件地址
+            //修改头像
+            $result = User::where('id',$user_id)->update(['head'=>$head_pic]);
+            if($result){
+                return response()->json([
+                    'result' => 'ok',
+                    'code' => Code::$OK,
+                    'msg'=>'头像修改成功',
+                    'data' => [
+                        'head_pic' => $head_pic
+                    ]
+                ]);
+            }
+            return response()->json([
+                'result' => 'error',
+                'code' => Code::$SystemErr,
+                'msg'=>'系统错误，请稍后重试'
+            ]);
 
         }else{
             return response()->json([
