@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Code;
 use App\Http\Qiniu;
+use App\Models\Attachment;
 use App\Models\User;
 use Illuminate\Support\Facades\Input;
 use Illuminate\Support\Facades\Validator;
@@ -164,6 +165,9 @@ class UserInfoController extends Controller
                 ]);
             }
 
+            //获取文件类型
+            $mimeType = $request->file('value')->getMimeType();
+
             //图片移动
             $qiniu = new Qiniu();
             $move = $qiniu->moveFile($request->file('value'));//移动文件到服务器
@@ -187,6 +191,18 @@ class UserInfoController extends Controller
             $head_pic = env('QINIU_DOMAIN_NAME','').$ret['key'];//上传到七牛云的文件地址
             //修改头像
             $result = User::where('id',$user_id)->update(['head'=>$head_pic]);
+
+            //存放到附件以后备用
+            $add = [
+                'upload_id'=>$user_id,
+                'upload_type'=>'个人',
+                'type'=>$mimeType,
+                'function'=>'头像',
+                'url'=>$head_pic,
+                'time'=>time()
+            ];
+            $result1 = Attachment::insert($add);
+
             if($result){
                 return response()->json([
                     'result' => 'ok',
