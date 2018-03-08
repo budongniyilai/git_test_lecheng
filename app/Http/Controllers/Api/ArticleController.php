@@ -68,7 +68,7 @@ class ArticleController extends Controller
                                ->where('status',2)   //文章状态需为可读
                               //文章排序，暂时按照最新文章来排序，后面写一个综合热度排序
                                ->orderBy('id', 'desc')   //文章倒序排列，最新的在前
-                               ->paginate(5);  //文章分页，每页返回5条数据
+                               ->paginate(10);  //文章分页，每页返回5条数据
 
         foreach ($article_list as $key => $value){
             //查询作者名称
