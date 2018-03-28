@@ -55,3 +55,7 @@ Route::group(['namespace' => 'Api'],function (){
 //    Route::post('/upload','UserInfoController@upload');//上传图片测试
 });
 
+Route::group(['middleware'=>'auth:api','namespace' => 'Push'],function () {
+    Route::get('/send_to_all', 'GatewayClientController@sendToALL'); //给全体推送一条消息
+});
+
