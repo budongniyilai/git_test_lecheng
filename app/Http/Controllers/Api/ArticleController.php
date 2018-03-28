@@ -352,6 +352,34 @@ class ArticleController extends Controller
             }
         }
     }
+    
+    //查看收藏文章
+    public function queryArticleCollection(Request $request)
+    {
+        //获得用户id
+        $user_id =$request->user()->id;
+        $result = ArticleCollection::where('user_id',$user_id)->orderBy('time', 'desc')->paginate(10);
+        if (count($result)==0){
+            return response()->json([
+                'result' => 'error',
+                'code' => Code::$NoData,
+                'msg'=>'没有收藏文章'
+            ]);
+        }
+        foreach ($result as $key=>$value){
+            $value->article_id;
+            $articles = Article::where('id',$value->article_id)->first();
+            $value->title = $articles->title;
+            $value->img = $articles->img;
+        }
+        return response()->json([
+            'result' => 'ok',
+            'code' => Code::$OK,
+            'msg'=>'成功',
+            'data'=>$result
+        ]);
+
+    }
 
     //关注作者
     public function followAuthor(Request $request)

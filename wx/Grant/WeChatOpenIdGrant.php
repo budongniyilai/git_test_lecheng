@@ -113,7 +113,7 @@ class WeChatOpenIdGrant extends AbstractGrant{
         //如果该用户不存在，创建用户信息
         if (!$user){
             $user=$this->userRepository->create([
-                'name'=>Uuid::uuid(),
+                'name'=>Uuid::uuid(),     //得到一个随机的用户名
                 'nickname'=>$data->nickName,
                 'weixin_open_id'=>$data->openId,
                 'password'=>'$10$mHQxuoZa9Qec7b5Qdk1UyuVAARRFWNFTBDzom97BSNsUa6o/NR8SK',

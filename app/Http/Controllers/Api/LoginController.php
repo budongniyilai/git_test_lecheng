@@ -37,7 +37,7 @@ class LoginController extends Controller
 
         //用户验证及生成token
         $http = new Curl();
-        $response = $http->post('http://lecheng.viiwen.cn/api/oauth/token',
+        $response = $http->post('https://lecheng.viiwen.cn/api/oauth/token',
             [
                 'grant_type' => 'password',
                 'client_id' => 2,
@@ -93,7 +93,7 @@ class LoginController extends Controller
 
         //用户验证及生成token
         $http = new Curl();
-        $response = $http->post('http://lecheng.viiwen.cn/api/oauth/token',
+        $response = $http->post('https://lecheng.viiwen.cn/api/oauth/token',
             [
                 'grant_type' => 'wechat_openid',
                 'client_id' => 2,
@@ -140,7 +140,7 @@ class LoginController extends Controller
 
         //刷新token
         $http = new Curl();
-        $response = $http->post('http://lecheng.viiwen.cn/api/oauth/token',
+        $response = $http->post('https://lecheng.viiwen.cn/api/oauth/token',
             [
                 'grant_type' => 'refresh_token',
                 'client_id' => 2,

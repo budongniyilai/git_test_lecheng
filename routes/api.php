@@ -15,6 +15,14 @@ Route::group(['middleware'=>'auth:api','namespace' => 'Api'],function (){
 
     Route::get('/get_user','UsersController@getUser');//获取用户信息
     Route::post('/modify_user_info','UserInfoController@modifyUserInfo');   //修改用户信息
+    Route::post('/add_course_collection','CourseController@addCourseCollection');  //添加/取消  课程收藏
+    Route::post('/add_ei_collection','EiController@addEiCollection');  //添加/取消  机构收藏
+
+    Route::get('/query_article_collection','ArticleController@queryArticleCollection');   //查看收藏文章
+    Route::get('/query_course_collection','CourseController@queryCourseCollection');    //查看收藏课程
+    Route::get('/query_ei_collection','EiController@queryEiCollection');   //查看收藏机构
+
+    Route::get('/my_course','PersonalController@myCourse');  //查看我的课程
 
 });
 
@@ -40,6 +48,9 @@ Route::group(['namespace' => 'Api'],function (){
     Route::post('get_article','ArticleController@getArticle');      //获取文章详细信息
     Route::post('search_article','ArticleController@searchArticle');      //搜索文章
     Route::post('get_author_all_article','ArticleController@getAuthorAllArticle');  //获取作者主页及所有文章列表
+
+
+    Route::post('query_ei_detail','EiController@queryEiDetail');     //查看机构详情
 
 //    Route::post('/upload','UserInfoController@upload');//上传图片测试
 });

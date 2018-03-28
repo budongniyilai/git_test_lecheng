@@ -87,7 +87,7 @@ class RegisterController extends Controller
 
         //生成并返回token
         $http = new Curl();
-        $response = $http->post('http://lecheng.viiwen.cn/api/oauth/token',
+        $response = $http->post('https://lecheng.viiwen.cn/api/oauth/token',
             [
                 'grant_type' => 'password',
                 'client_id' => 2,

@@ -5,9 +5,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Code;
+use App\Models\CourseCollection;
+use App\Models\CourseEnvironment;
 use App\Models\EiCourseClass;
 use App\Models\EiCourseLike;
 use App\Models\EiCourses;
+use App\Models\EiEnvironment;
 use App\Models\EiLocation;
 use App\Models\EiPlatform;
 use Illuminate\Http\Request;
@@ -23,9 +26,15 @@ class CourseController extends Controller
     {
         $course_class = EiCourseClass::where('grade', 1)->get();
         foreach ($course_class as $key => $value){
+            $value->anchor = 'anchor'.$value->id;      //设置1级分类的锚点标识
             $second_level = EiCourseClass::where('grade',2)->where('upper_level',$value->id)->get();
             foreach ($second_level as $k => $v){
-                $v->three_level = EiCourseClass::where('grade',3)->where('upper_level',$v->id)->get();
+                $v->anchor = 'anchor'.$v->id;      //设置2级分类的锚点标识
+                $three_level = EiCourseClass::where('grade',3)->where('upper_level',$v->id)->get();
+                foreach ($three_level as $k1 => $v1 ){
+                    $v1->anchor = 'anchor'.$v1->id;      //设置3级分类的锚点标识
+                }
+                $v->three_level = $three_level;
             }
             $value->second_level = $second_level;
         }
@@ -48,10 +57,29 @@ class CourseController extends Controller
          * 升级2：获取用户本地传递过来的关键词数组，以推荐课程
          */
 
-        //以下是接口完整性测试代码
+        //以下是接口完整性测试代码（不是正式的代码）
+        //  'id','ei_id','class_id','mode','img','name','price','time','signup_num','like_num','lat','lng','address','distance'
         $reco_course_list = EiCourses::limit(10)         //推荐10个课程到前端
-            ->select('id','ei_id','class_id','mode','img','name','price','signup_num','like_num')
+            ->select('id','ei_id','class_id','mode','img','name','price','time','signup_num','like_num','lat','lng','address')
             ->get();
+
+        if(!isset($request->lat)||!isset($request->lng)){  //如果前台定位失败
+            foreach ($reco_course_list as $key => $value){
+                $value->distance = null;
+            }
+        }else{
+            $lat = $request->lat;    //获得纬度
+            $lng = $request->lng;    //获得经度
+            foreach ($reco_course_list as $key => $value){
+                $value->distance = intval(6378.138*acos(sin($lat*pi()/180)*sin($value->lat*pi()/180)+cos($lat*pi()/180)*cos($value->lat*pi()/180)*cos($lng*pi()/180-$value->lng*pi()/180))*1000);
+                if ($value->distance >= 1000){
+                    $value->distance = round($value->distance / 1000,1);
+                    $value->distance = $value->distance.'km';
+                }else{
+                    $value->distance = $value->distance.'m';
+                }
+            }
+        }
 
         return response()->json([
             'result' => 'ok',
@@ -82,8 +110,6 @@ class CourseController extends Controller
             'price_hi.required' => '你没有提供最高价格',
             'price_mi.required' => '你没有提供最低价格',
             'order.required' => '你没有提供排序方法',
-            'lat.required' => '你没有提供纬度',
-            'lng.required' => '你没有提供经度'
         ];
 
         $validator = Validator::make(Input::all(),[
@@ -92,8 +118,6 @@ class CourseController extends Controller
             'price_hi' => 'required',
             'price_mi' => 'required',
             'order' => 'required',
-            'lat' => 'required',
-            'lng' => 'required',
         ],$msg);
 
         if($validator->fails()){
@@ -110,8 +134,6 @@ class CourseController extends Controller
         $price_hi = $request->price_hi;    //获得课程最高价
         $price_mi = $request->price_mi;    //获得课程最低价
         $order = $request->order;          //获得排序规则
-        $lat = $request->lat;    //获得纬度
-        $lng = $request->lng;    //获得经度
 
         //处理搜索关键词
         if(!isset($request->search)){    //不存在或为空
@@ -170,7 +192,16 @@ class CourseController extends Controller
         }
 
         //处理价格区间
-        if($price_mi!=0||$price_hi!='all'){        //如果价格不是0到无穷，加入查询
+        if($price_mi==0&&$price_hi=='all'){}//都没填，不做处理
+        if($price_mi==0&&$price_hi!='all'){    //只填写了最大价格
+            $price_hi = intval($price_hi);
+            $course_list = $course_list->where('price','<=',$price_hi);
+        }
+        if ($price_mi!=0&&$price_hi=='all'){   //只填写了最小价格
+            $price_mi = intval($price_mi);
+            $course_list = $course_list->where('price','>=',$price_mi);
+        }
+        if($price_mi!=0&&$price_hi!='all'){    //填写了价格区间
             $price_hi = intval($price_hi);
             $price_mi = intval($price_mi);
             if ($price_mi>$price_hi){   //保证最大值比最小值大
@@ -183,12 +214,24 @@ class CourseController extends Controller
 
         //排序处理(1、默认排序 2、距离最近  3、价格最低  4、价格最高  5、报名最多  6、评分最高)
         if($order == 2){    //按距离最近排序
-            $sql_str = 'getDistance('.$lat.','.$lng.',ei_courses.lat,ei_courses.lng) AS distance';
-            $course_list = $course_list
-                ->select('id','ei_id','class_id','mode','img','name','price','time','signup_num','like_num','lat','lng','address',
-                         DB::raw($sql_str))
-                ->orderBy('distance','asc')
-                ->paginate(10);      //分页返回
+            if(!isset($request->lat)||!isset($request->lng)){      //未收到定位数据
+                $course_list = $course_list->orderBy('signup_num','desc'); //按默认排序
+                $course_list = $course_list
+                    ->select('id','ei_id','class_id','mode','img','name','price','time','signup_num','like_num','lat','lng','address')
+                    ->paginate(10);      //分页返回
+                foreach ($course_list as $key1 => $value1){
+                    $value1 -> distance = null;    //距离返回null
+                }
+            }else{
+                $lat = $request->lat;    //获得纬度
+                $lng = $request->lng;    //获得经度
+                $sql_str = 'getDistance('.$lat.','.$lng.',ei_courses.lat,ei_courses.lng) AS distance';
+                $course_list = $course_list
+                    ->select('id','ei_id','class_id','mode','img','name','price','time','signup_num','like_num','lat','lng','address',
+                        DB::raw($sql_str))
+                    ->orderBy('distance','asc')
+                    ->paginate(10);      //分页返回
+            }
         }else{    //按其它模式排序
             if($order == 1){
                 //默认排序
@@ -211,23 +254,34 @@ class CourseController extends Controller
                 ->paginate(10);      //分页返回
 
             //计算距离
-            foreach ($course_list as $key1 => $value1){
-                $value1 -> distance = intval(6378.138 * acos(
-                        sin($lat * pi() /180)
-                        *
-                        sin($value1->lat * pi() /180)
-                        +
-                        cos($lat * pi() /180)
-                        *
-                        cos($value1->lat * pi() /180)
-                        *cos($lng * pi() /180 - $value1->lng * pi() / 180)
-                    )*1000);
+            if(!isset($request->lat)||!isset($request->lng)) {      //未收到定位数据
+                foreach ($course_list as $key1 => $value1){
+                    $value1 -> distance = null;    //距离返回null
+                }
+            }else{
+                $lat = $request->lat;    //获得纬度
+                $lng = $request->lng;    //获得经度
+                foreach ($course_list as $key1 => $value1){
+                    $value1 -> distance = intval(6378.138 * acos(
+                            sin($lat * pi() /180)
+                            *
+                            sin($value1->lat * pi() /180)
+                            +
+                            cos($lat * pi() /180)
+                            *
+                            cos($value1->lat * pi() /180)
+                            *cos($lng * pi() /180 - $value1->lng * pi() / 180)
+                        )*1000);
+                }
             }
         }
 
+        //搜索/筛选结果处理
         foreach ($course_list as $key=>$value){
             //处理距离
-            if ($value->distance >= 1000){
+            if($value->distance ==null){
+                //不做处理
+            }elseif ($value->distance >= 1000){
                 $value->distance = round($value->distance / 1000,1);
                 $value->distance = $value->distance.'km';
             }else{
@@ -244,7 +298,7 @@ class CourseController extends Controller
                 'result' => 'ok',
                 'code' => Code::$OK,
                 'msg'=> '成功',
-                'data'=> []
+                'data'=> null
             ]);
         }
 
@@ -275,7 +329,9 @@ class CourseController extends Controller
             ]);
         }
 
-        $course = EiCourses::where('id',$request->course_id)->first();
+        $course_id = $request->course_id;
+
+        $course = EiCourses::where('id',$course_id)->first();
         if(!$course){       //如果该课程不存在
             return response()->json([
                 'result' => 'error',
@@ -287,6 +343,17 @@ class CourseController extends Controller
         //查询课程分类名
         $course_class_id = $course->class_id;
         $course->class_name = EiCourseClass::where('id',$course_class_id)->first()->name;
+
+        //查询课程环境图片
+        $environment = CourseEnvironment::where('course_id',$course_id)->get();
+        foreach ($environment as $key=>$value){
+            $ei_env = EiEnvironment::where('id',$value->environment_id)->first();
+            if($ei_env){
+                $value->name = $ei_env->name;
+                $value->img = $ei_env->img;
+            }
+        }
+        $course->environments = $environment;
 
         //查询机构名称
         //查询课程地址
@@ -391,4 +458,104 @@ class CourseController extends Controller
             }
         }
     }
+
+    //收藏课程
+    public function addCourseCollection(Request $request)
+    {
+        $msg = [
+            'course_id.required' => '你没有提供课程ID',
+            'type.required' => '你没有提供操作指令'
+        ];
+
+        $validator = Validator::make(Input::all(),[
+            'course_id' => 'required',
+            'type' => 'required',
+        ],$msg);
+
+        if($validator->fails()){
+            return response()->json([
+                'result' => 'error',
+                'code' => Code::$ParameterErr,
+                'msg'=>$validator->errors()
+            ]);
+        }
+
+        $course_id = $request->course_id;
+        $type = $request->type;
+        $user_id =$request->user()->id;
+
+        //收藏判断
+        $result = CourseCollection::where('course_id',$course_id)
+            ->where('user_id',$user_id)->first();
+
+        if($result){   //存在收藏数据
+            if ($type == 1){
+                return response()->json([
+                    'result' => 'error',
+                    'code' => Code::$ExistData,
+                    'msg'=>'你已经收藏过该课程'
+                ]);
+            }
+            if ($type == -1){
+                //删除收藏记录
+                $result1 = CourseCollection::where('course_id',$course_id)->where('user_id',$user_id)->delete();
+
+                return response()->json([
+                    'result' => 'ok',
+                    'code' => Code::$OK,
+                    'msg'=>'取消收藏成功'
+                ]);
+            }
+        }else{  //收藏记录不存在
+            if($type == -1){
+                return response()->json([
+                    'result' => 'error',
+                    'code' => Code::$NoData,
+                    'msg'=>'你还未收藏，无法取消'
+                ]);
+            }
+            if ($type == 1){
+                $add = [
+                    'user_id' => $user_id,
+                    'course_id' => $course_id,
+                    'time' => time()
+                ];
+                $result3 = CourseCollection::Insert($add);  //写入收藏
+
+                return response()->json([
+                    'result' => 'ok',
+                    'code' => Code::$OK,
+                    'msg'=>'收藏成功！'
+                ]);
+            }
+        }
+    }
+
+    //查看收藏的课程
+    public function queryCourseCollection(Request $request)
+    {
+        //获得用户id
+        $user_id =$request->user()->id;
+        $result = CourseCollection::where('user_id',$user_id)->orderBy('time', 'desc')->paginate(10);
+        if (count($result)==0){
+            return response()->json([
+                'result' => 'error',
+                'code' => Code::$NoData,
+                'msg'=>'没有收藏课程'
+            ]);
+        }
+        foreach ($result as $key=>$value){
+            $articles = EiCourses::where('id',$value->course_id)->first();
+            $value->course_name = $articles->name;
+            $value->img = $articles->img;
+        }
+        return response()->json([
+            'result' => 'ok',
+            'code' => Code::$OK,
+            'msg'=>'成功',
+            'data'=>$result
+        ]);
+
+    }
+
 }
