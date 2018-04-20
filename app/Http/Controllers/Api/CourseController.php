@@ -314,10 +314,12 @@ class CourseController extends Controller
     public function courseDetail (Request $request)
     {
         $msg = [
+            'user_id.required' => '你没有提供用户id',
             'course_id.required' => '你没有提供课程ID',
         ];
 
         $validator = Validator::make(Input::all(),[
+            'user_id' => 'required',
             'course_id' => 'required',
         ],$msg);
 
@@ -329,8 +331,10 @@ class CourseController extends Controller
             ]);
         }
 
+        $user_id = $request->user_id;
         $course_id = $request->course_id;
 
+        //查询课程详情
         $course = EiCourses::where('id',$course_id)->first();
         if(!$course){       //如果该课程不存在
             return response()->json([
@@ -343,6 +347,21 @@ class CourseController extends Controller
         //查询课程分类名
         $course_class_id = $course->class_id;
         $course->class_name = EiCourseClass::where('id',$course_class_id)->first()->name;
+
+        //查询是否收藏过该课程
+        $re = CourseCollection::where('user_id',$user_id)->where('course_id',$course_id)->first();
+        if($re){
+            $course->collection = true;     //该用户收藏了该课程
+        }else{
+            $course->collection = false;      //该用户没有收藏该课程
+        }
+        //查询课程咨询联系人信息
+        $ei_id = $course -> ei_id;     //得到机构id
+        $ei_info = EiPlatform::where('id',$ei_id)->first();
+        $linkman['name'] = $ei_info->ei_name;
+        $linkman['head_img'] = $ei_info->ei_logo;
+        $linkman['receive_user_id'] = $ei_info->user_id;
+        $course->linkman = $linkman;
 
         //查询课程环境图片
         $environment = CourseEnvironment::where('course_id',$course_id)->get();
@@ -556,6 +575,42 @@ class CourseController extends Controller
             'data'=>$result
         ]);
 
+    }
+
+    public function getCourseImg(Request $request)
+    {
+        $msg = [
+            'course_id.required' => '你没有提供课程ID',
+        ];
+
+        $validator = Validator::make(Input::all(),[
+            'course_id' => 'required',
+        ],$msg);
+
+        if($validator->fails()){
+            return response()->json([
+                'result' => 'error',
+                'code' => Code::$ParameterErr,
+                'msg'=>$validator->errors()
+            ]);
+        }
+        $course_id = $request->course_id;
+
+        $course_data = EiCourses::where('id',$course_id)->select('img')->first();
+
+        if($course_data){
+            return response()->json([
+                'result' => 'ok',
+                'code' => Code::$OK,
+                'data'=>$course_data
+            ]);
+        }
+
+        return response()->json([
+            'result' => 'error',
+            'code' => Code::$SystemErr,
+            'msg'=>'获取课程图片失败'
+        ]);
     }
 
 }

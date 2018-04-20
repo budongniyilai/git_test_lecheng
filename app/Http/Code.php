@@ -16,5 +16,6 @@ class Code
     public static $Overdue = 402;      //参数已经过期
     public static $NoData = 403;       //没有数据
     public static $ExistData = 404;    //数据已存在
+    public static $NotOnLine = 405;    //用户不在线
     public static $SystemErr = 500;    //系统错误
 }

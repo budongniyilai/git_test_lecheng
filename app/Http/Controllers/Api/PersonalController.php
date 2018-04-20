@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\EiCourseEvaluate;
 use App\Models\MyCourse;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -38,6 +39,14 @@ class PersonalController extends Controller
                 $value->ei_name = $ei->ei_name;
             }else{
                 $value->ei_name = null;
+            }
+
+            //获取是否评价
+            $evaluate = EiCourseEvaluate::where('user_id',$user_id)->where('course_id',$course->id)->first();
+            if($evaluate){
+                $value->evaluate = true;
+            }else{
+                $value->evaluate = false;
             }
         }
         return response()->json([

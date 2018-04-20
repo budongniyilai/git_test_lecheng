@@ -51,11 +51,21 @@ Route::group(['namespace' => 'Api'],function (){
 
 
     Route::post('query_ei_detail','EiController@queryEiDetail');     //查看机构详情
+    Route::post('get_course_img','CourseController@getCourseImg');   //查询课程图片
+
 
 //    Route::post('/upload','UserInfoController@upload');//上传图片测试
 });
 
+//需要鉴权的推送服务接口
 Route::group(['middleware'=>'auth:api','namespace' => 'Push'],function () {
     Route::get('/send_to_all', 'GatewayClientController@sendToALL'); //给全体推送一条消息
+    Route::post('/bind_user_id', 'GatewayClientController@bindUid'); //绑定用户和客服端
+    Route::post('/send_to_user_id', 'GatewayClientController@sendToUid'); //给用户id发送消息
+
+});
+//不需要用户鉴权的推送服务接口
+Route::group(['namespace' => 'Push'],function () {
+    Route::post('/is_user_id_on_line', 'GatewayClientController@isUidOnline'); //查询某个用户id是否在线
 });
 
