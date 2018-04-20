@@ -24,6 +24,10 @@ Route::group(['middleware'=>'auth:api','namespace' => 'Api'],function (){
 
     Route::get('/my_course','PersonalController@myCourse');  //查看我的课程
 
+    //web端专属接口
+    Route::get('/ei_into_status','EiController@eiIntoStatus');  //查询用户申请机构入驻状态
+    Route::post('/ei_into_data','EiController@eiIntoData');   //机构申请入驻提交数据处理
+
 });
 
 //不需要用户鉴权的路由

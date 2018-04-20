@@ -63,7 +63,8 @@ class GatewayClientController extends Controller
                     'type' => 'private_letters',        //表示私信
                     'send_user_id'=>$value->send_user_id,
                     'message_type'=>$value->message_type,
-                    'message'=>$value->message
+                    'message'=>$value->message,
+                    'course_id'=>$value->course
                 ];
                 $data = json_encode($data);
                 $Gateway->sendToUid($user_id,$data);      //发送未读消息
@@ -146,6 +147,11 @@ class GatewayClientController extends Controller
         $message = $request->message;
         $send_user_id = $request->user()->id;
 
+        $course_id = null;
+        if(isset($request->course_id)){   //如果存在课程id
+            $course_id = $request->course_id;
+        }
+
         //判断接收信息的用户是否在线
         $result = $Gateway->isUidOnline($receive_user_id);
         if($result==0){
@@ -157,6 +163,7 @@ class GatewayClientController extends Controller
         //存储消息
         $arr = [
             'send_user_id'=>$send_user_id,
+            'course_id'=>$course_id,
             'receive_user_id'=>$receive_user_id,
             'message_type'=>$message_type,
             'message'=>$message,
@@ -179,8 +186,10 @@ class GatewayClientController extends Controller
             'type' => 'private_letters',        //表示私信
             'send_user_id'=>$send_user_id,
             'message_type'=>$message_type,
-            'message'=>$message
+            'message'=>$message,
+            'course_id'=>$course_id
         ];
+
         $data = json_encode($data);
         $Gateway->sendToUid($receive_user_id,$data);
 
