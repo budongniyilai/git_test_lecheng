@@ -19,7 +19,7 @@ class PersonalController extends Controller
     {
         $user_id = $request->user()->id;
 
-        $my_courses = MyCourse::where('user_id',$user_id)->orderBy('time', 'desc')->paginate(10);
+        $my_courses = MyCourse::where('user_id',$user_id)->orderBy('time', 'desc')->paginate(3);
         if (count($my_courses)==0){
             return response()->json([
                 'result' => 'error',
