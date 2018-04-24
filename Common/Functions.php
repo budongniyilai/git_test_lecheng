@@ -25,4 +25,15 @@ class Functions
             return $verfy_code;
         }
     }
+    
+    //生成随机字符串
+    public function random_str($length)
+    {
+        $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        $str = '';
+        for ($i = 0; $i < $length; $i++ ){
+            $str .=$chars[mt_rand(0,61)];
+        }
+        return $str;
+    }
 }

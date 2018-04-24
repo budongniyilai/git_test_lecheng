@@ -175,8 +175,8 @@ class GatewayClientController extends Controller
         if($result==0){
             //反馈
             return response()->json([
-                'result' => 'error',
-                'code' => Code::$NotOnLine,
+                'result' => 'ok',
+                'code' => Code::$OK,
                 'msg'=>'对方未在线，系统将在他上线后重发消息'
             ]);
         }

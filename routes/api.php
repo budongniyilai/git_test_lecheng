@@ -24,6 +24,11 @@ Route::group(['middleware'=>'auth:api','namespace' => 'Api'],function (){
 
     Route::get('/my_course','PersonalController@myCourse');  //查看我的课程
 
+    //微信支付
+    Route::post('/place_an_order','OrderController@placeAnOrder');  //微信同一下单接口
+    Route::any('/wx_pay_buck','OrderController@wxPayBuck');  //微信同一下单接口
+
+
     //web端专属接口
     Route::get('/ei_into_status','EiController@eiIntoStatus');  //查询用户申请机构入驻状态
     Route::post('/ei_into_data','EiController@eiIntoData');   //机构申请入驻提交数据处理
