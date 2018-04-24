@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Code;
 use App\Models\EiCourses;
 use App\Models\EiPlatform;
+use App\Models\MyCourse;
 use App\Models\Order;
 use Common\Functions;
 use Curl\Curl;
@@ -45,8 +46,8 @@ class OrderController extends Controller
                 'msg'=>'你不是微信登录用户'
             ]);
         }
-//        $openid = $request->user()->weixin_open_id;
-        $openid = 'oPap_4k-VDZ_0yfzm0Ic_tckWN0I';
+        $openid = $request->user()->weixin_open_id;
+//        $openid = 'oPap_4k-VDZ_0yfzm0Ic_tckWN0I';
 
         $commodity_type = $request->commodity_type;
         $commodity_id = $request->commodity_id;
@@ -168,8 +169,59 @@ class OrderController extends Controller
     }
 
     //微信支付结果回调函数
-    public function wxPayBuck()
+    public function wxPayBuck(Request $request)
     {
-        //将结果写入数据库
+        /**  微信反馈回来的字段，返回形式为XML
+         * appid           小程序id
+         * bank_type       付款银行
+         * cash_fee        现金支付金额
+         * fee_type        货币种类
+         * is_subscribe    是否关注公众账号
+         * mch_id          商户号
+         * nonce_str       随机字符串
+         * openid          用户标识
+         * out_trade_no    商户订单号
+         * result_code     业务结果
+         * return_code     返回状态码
+         * sign            签名
+         * time_end        支付完成时间
+         * total_fee       订单金额
+         * trade_type      交易类型
+         * transaction_id  微信支付订单号
+         */
+        //所有请求数据$request，包括head跟body
+        $body = file_get_contents("php://input");//获得body（这里是XML格式的字符串）
+        $obj_body = simplexml_load_string($body, 'SimpleXMLElement', LIBXML_NOCDATA);//将XML转化成对象
+        if($obj_body->return_code=='SUCCESS'){
+            $out_trade_no = $obj_body->out_trade_no;    //商户订单号
+            $time_end = $obj_body->time_end;            //支付完成时间
+            $total_fee = $obj_body->total_fee;          //订单金额（单位为分）
+            $transaction_id = $obj_body->transaction_id;   //微信支付订单号
+
+            //查询订单
+            $result = Order::where('out_trade_no',$out_trade_no)->first();
+            if($result){
+                if($result->total_fee == $total_fee){   //订单金额没有问题
+                    //更新订单数据
+                    $up_date_arr = [
+                        'transaction_id'=>$transaction_id,
+                        'time_end'=>$time_end,
+                        'status'=>2
+                    ];
+                    $upDate = Order::where('out_trade_no',$out_trade_no)->update($up_date_arr);
+
+                    $commodity_type = $result->commodity_type;   //商品种类
+                    if($commodity_type == '机构课程'){
+                        $my_course_data = [
+                            'user_id'=>$result->user_id,
+                            'course_id'=>$result->commodity_id,
+                            'time'=>time(),
+                        ];
+                        //报名成功，写入我的课程
+                        MyCourse::insert($my_course_data);
+                    }
+                }
+            }
+        }
     }
 }

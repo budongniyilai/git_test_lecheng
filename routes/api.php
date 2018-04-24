@@ -26,8 +26,6 @@ Route::group(['middleware'=>'auth:api','namespace' => 'Api'],function (){
 
     //微信支付
     Route::post('/place_an_order','OrderController@placeAnOrder');  //微信同一下单接口
-    Route::any('/wx_pay_buck','OrderController@wxPayBuck');  //微信同一下单接口
-
 
     //web端专属接口
     Route::get('/ei_into_status','EiController@eiIntoStatus');  //查询用户申请机构入驻状态
@@ -64,6 +62,7 @@ Route::group(['namespace' => 'Api'],function (){
 
 
 //    Route::post('/upload','UserInfoController@upload');//上传图片测试
+    Route::any('/wx_pay_buck','OrderController@wxPayBuck');  //微信支付结果回调接口
 });
 
 //需要鉴权的推送服务接口
